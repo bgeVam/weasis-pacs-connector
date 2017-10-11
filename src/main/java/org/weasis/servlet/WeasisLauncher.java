@@ -13,6 +13,7 @@ package org.weasis.servlet;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLEncoder;
@@ -53,12 +54,12 @@ public class WeasisLauncher extends HttpServlet {
     @Override
     protected void doHead(HttpServletRequest request, HttpServletResponse response)
         throws ServletException, IOException {
-        try {
-            RequestDispatcher dispatcher = getServletContext().getRequestDispatcher("/jnlpBuilder");
-            dispatcher.forward(request, response);
-        } catch (Exception e) {
-            LOGGER.error("JNLP dispatcher error", e);
-            ServletUtil.sendResponseError(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e.getMessage());
+        if (studyExists(request, response))
+        {
+            invokeWeasis(request, response, null); 
+        }
+        else{
+            ServletUtil.sendResponseError(response, HttpServletResponse.SC_NOT_FOUND, "The requested study does not exist.");
         }
     }
 
@@ -233,5 +234,38 @@ public class WeasisLauncher extends HttpServlet {
             ServletUtil.sendResponseError(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e.getMessage());
         }
         return new UploadXml("INVALID", request.getCharacterEncoding());
+    }
+    
+    private boolean studyExists(HttpServletRequest request, HttpServletResponse response) {
+
+        try {
+            // Check if a manifest exists for the requested study.
+            URL url = new URL(getManifestCheckURL(request));
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setReadTimeout(5000);
+            LOGGER.info("checkStudy", "Request URL ... " + url.getQuery());
+            if (conn.getResponseCode() == 200){
+                return true;
+            }
+            } catch (Exception e) {
+                LOGGER.error("Error on checking accession Number", e);
+                ServletUtil.sendResponseError(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e.getMessage());
+            }
+        return false;
+    }
+    
+    private String getManifestCheckURL(HttpServletRequest request) {
+
+        StringBuilder url = new StringBuilder();
+        url.append(request.getScheme()).append("://").append(request.getServerName());
+        url.append(":").append(request.getServerPort());
+        url.append(request.getContextPath()).append("/manifest");
+        if (request.getPathInfo() != null) {
+            url.append(request.getPathInfo());
+        }
+        if (request.getQueryString() != null) {
+            url.append("?").append(request.getQueryString());
+        }
+        return url.toString();
     }
 }
