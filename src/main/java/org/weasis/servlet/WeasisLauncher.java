@@ -52,18 +52,6 @@ public class WeasisLauncher extends HttpServlet {
     }
 
     @Override
-    protected void doHead(HttpServletRequest request, HttpServletResponse response)
-        throws ServletException, IOException {
-        if (studyExists(request, response))
-        {
-            invokeWeasis(request, response, null); 
-        }
-        else{
-            ServletUtil.sendResponseError(response, HttpServletResponse.SC_NOT_FOUND, "The requested study does not exist.");
-        }
-    }
-
-    @Override
     public void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         UploadXml manifest = uploadManifest(request, response);
         if (manifest != null && "INVALID".equals(manifest.xmlManifest(null))) {
@@ -75,7 +63,13 @@ public class WeasisLauncher extends HttpServlet {
 
     @Override
     public void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        invokeWeasis(request, response, null);
+        if (studyExists(request, response))
+        {
+            invokeWeasis(request, response, null); 
+        }
+        else{
+            ServletUtil.sendResponseError(response, HttpServletResponse.SC_NOT_FOUND, "The requested study does not exist.");
+        }
     }
 
     private static void invokeWeasis(HttpServletRequest request, HttpServletResponse response, XmlManifest manifest) {
